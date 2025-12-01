@@ -267,6 +267,7 @@ const firebaseConfig = {
         const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
         // Aggiorna versione locale
         localStorage.setItem(CODE_VERSION_KEY, String(serverCodeVer));
+        currentCodeVersion = serverCodeVer;
         const msg = s.global_block_message || "Codice aggiornato: il link non e' piu' valido";
         // Vecchi dispositivi: blocco globale (main page) con overlay persistente
         if (hadLocalVersion) {
@@ -284,7 +285,8 @@ const firebaseConfig = {
         qs("expiredOverlay")?.classList.add("hidden");
         qs("sessionExpired")?.classList.add("hidden");
         qs("controlPanel")?.classList.add("hidden");
-        resetSessionForNewCode();
+        showAuthForm();
+        updateDoorVisibility();
         return;
       }
 
@@ -685,7 +687,9 @@ const firebaseConfig = {
   }
 
   function handleCodeChange(newVersion) {
+    const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
     currentCodeVersion = newVersion;
+    localStorage.setItem(CODE_VERSION_KEY, String(newVersion));
     database
       .ref("settings/secret_code")
       .once("value")
@@ -693,7 +697,6 @@ const firebaseConfig = {
         if (codeSnap.exists()) {
           CORRECT_CODE = codeSnap.val();
           localStorage.setItem("secret_code", CORRECT_CODE);
-          const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
           const msg = "Codice aggiornato: il link non e' piu' valido";
           if (hadLocalVersion) {
             blockAccess(msg);
@@ -705,7 +708,8 @@ const firebaseConfig = {
             qs("expiredOverlay")?.classList.add("hidden");
             qs("sessionExpired")?.classList.add("hidden");
             qs("controlPanel")?.classList.add("hidden");
-            resetSessionForNewCode();
+            showAuthForm();
+            updateDoorVisibility();
           }
         }
       });
