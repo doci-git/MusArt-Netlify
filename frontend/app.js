@@ -894,6 +894,7 @@ const firebaseConfig = {
       showTokenError(r);
       try {
         blockTokenOnly(r, token);
+        blockAccess(r, token);
         localStorage.removeItem(`token_ok_${token}`);
       } catch {}
       showSessionExpired();
@@ -910,6 +911,7 @@ const firebaseConfig = {
         try {
           markTokenDeviceBlocked(token, "Invalid token");
           blockTokenOnly("Invalid token", token);
+          blockAccess("Invalid token", token);
           localStorage.removeItem(`token_ok_${token}`);
         } catch {}
         showSessionExpired();
@@ -925,6 +927,7 @@ const firebaseConfig = {
         try {
           markTokenDeviceBlocked(token, isValid.reason || "Access blocked");
           blockTokenOnly(isValid.reason || "Access blocked", token);
+          blockAccess(isValid.reason || "Access blocked", token);
           localStorage.removeItem(`token_ok_${token}`);
         } catch {}
         showSessionExpired();
@@ -961,6 +964,7 @@ const firebaseConfig = {
       try {
         markTokenDeviceBlocked(token, "Verification error");
         blockTokenOnly("Verification error", token);
+        blockAccess("Verification error", token);
         localStorage.removeItem(`token_ok_${token}`);
       } catch {}
       showSessionExpired();
@@ -1083,6 +1087,7 @@ const firebaseConfig = {
       null;
     // Non bloccare globalmente il dispositivo per eventi legati a questo token
     blockTokenOnly(reason, t);
+    blockAccess(reason, t); // blocco persistente anche per il link principale
     if (t) markTokenDeviceBlocked(t, reason || "Sessione token scaduta");
     try {
       if (t) localStorage.removeItem(`token_ok_${t}`);
@@ -1204,12 +1209,7 @@ const firebaseConfig = {
     const iv = setInterval(() => {
       if (Date.now() > expirationTime) {
         clearInterval(iv);
-        isTokenSession = false;
-        window.isTokenSession = false;
-        const t = currentTokenId || null;
-        blockTokenOnly("Link expired", t);
-        if (t) markTokenDeviceBlocked(t, "Link expired");
-        showSessionExpired();
+        forceLogoutFromToken("Link expired");
       }
     }, 1000);
   }
