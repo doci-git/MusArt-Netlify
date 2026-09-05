@@ -4,17 +4,17 @@
   // =============================================
   // CONFIGURAZIONE E INIZIALIZZAZIONE
   // =============================================
-const firebaseConfig = {
-  apiKey: "AIzaSyCuy3Sak96soCla7b5Yb5wmkdVfMqAXmok",
-  authDomain: "check-in-4e0e9.firebaseapp.com",
-  databaseURL:
-    "https://check-in-4e0e9-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "check-in-4e0e9",
-  storageBucket: "check-in-4e0e9.firebasestorage.app",
-  messagingSenderId: "723880990177",
-  appId: "1:723880990177:web:f002733b2cc2e50d172ea0",
-  measurementId: "G-H97GB9L4F5",
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuy3Sak96soCla7b5Yb5wmkdVfMqAXmok",
+    authDomain: "check-in-4e0e9.firebaseapp.com",
+    databaseURL:
+      "https://check-in-4e0e9-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "check-in-4e0e9",
+    storageBucket: "check-in-4e0e9.firebasestorage.app",
+    messagingSenderId: "723880990177",
+    appId: "1:723880990177:web:f002733b2cc2e50d172ea0",
+    measurementId: "G-H97GB9L4F5",
+  };
   const DOOR_API_URL = "/api/shelly-control";
   const SECRET_KEY = "musart_secret_123_fixed_key";
   const CODE_VERSION_KEY = "code_version";
@@ -117,8 +117,8 @@ const firebaseConfig = {
         type === "warning"
           ? "#FFA500"
           : type === "error"
-          ? "#FF5A5F"
-          : "#4CAF50"
+            ? "#FF5A5F"
+            : "#4CAF50"
       };
       color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.12);
       display:flex; gap:10px; align-items:center; max-width:360px;
@@ -142,7 +142,7 @@ const firebaseConfig = {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     const p = fetch(url, { ...options, signal: controller.signal }).finally(
-      () => clearTimeout(id)
+      () => clearTimeout(id),
     );
     return p;
   }
@@ -207,7 +207,7 @@ const firebaseConfig = {
     } catch (error) {
       console.error(
         "Errore nel caricamento delle impostazioni da Firebase:",
-        error
+        error,
       );
       return null;
     }
@@ -220,10 +220,7 @@ const firebaseConfig = {
     }
     if (settings?.max_login_attempts) {
       MAX_LOGIN_ATTEMPTS = parseInt(settings.max_login_attempts, 10);
-      localStorage.setItem(
-        "max_login_attempts",
-        String(MAX_LOGIN_ATTEMPTS)
-      );
+      localStorage.setItem("max_login_attempts", String(MAX_LOGIN_ATTEMPTS));
     }
     if (settings?.lockout_minutes) {
       LOCKOUT_MINUTES = parseInt(settings.lockout_minutes, 10);
@@ -260,33 +257,13 @@ const firebaseConfig = {
       const serverCodeVer = parseInt(s.code_version || 1, 10);
       const localCodeVer = parseInt(
         localStorage.getItem(CODE_VERSION_KEY) || "1",
-        10
+        10,
       );
       if (serverCodeVer > localCodeVer) {
-        // Determina se questo dispositivo ha già visto una versione precedente
-        const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
-        // Aggiorna versione locale
-        localStorage.setItem(CODE_VERSION_KEY, String(serverCodeVer));
-        currentCodeVersion = serverCodeVer;
-        const msg = s.global_block_message || "Codice aggiornato: il link non e' piu' valido";
-        // Vecchi dispositivi: blocco globale (main page) con overlay persistente
-        if (hadLocalVersion) {
-          blockAccess(msg);
-          showSessionExpired();
-          return;
-        }
-        // Token aperto: logout dal token
-        if (hasTokenFootprint()) {
-          forceLogoutFromToken(msg);
-          return;
-        }
-        // Nuovo dispositivo: niente blocco, torna al login
-        unblockAccess();
-        qs("expiredOverlay")?.classList.add("hidden");
-        qs("sessionExpired")?.classList.add("hidden");
-        qs("controlPanel")?.classList.add("hidden");
-        showAuthForm();
-        updateDoorVisibility();
+        const msg =
+          s.global_block_message ||
+          "Codice aggiornato: il link non e' piu' valido";
+        handleCodeVersionChange(serverCodeVer, msg);
         return;
       }
 
@@ -294,7 +271,7 @@ const firebaseConfig = {
       const serverUnblockVer = parseInt(s.session_reset_version || 0, 10);
       const localUnblockVer = parseInt(
         localStorage.getItem(UNBLOCK_VERSION_KEY) || "0",
-        10
+        10,
       );
       if (serverUnblockVer > localUnblockVer) {
         localStorage.setItem(UNBLOCK_VERSION_KEY, String(serverUnblockVer));
@@ -309,11 +286,37 @@ const firebaseConfig = {
         updateDoorVisibility();
         showNotification(
           s.global_unblock_message ||
-            "Sessione ripristinata. Inserisci il codice per accedere."
+            "Sessione ripristinata. Inserisci il codice per accedere.",
         );
         updateLockUI();
       }
     });
+  }
+
+  function handleCodeVersionChange(newVersion, reason) {
+    const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
+    const tokenSessionDetected = isTokenSession || hasTokenFootprint();
+
+    localStorage.setItem(CODE_VERSION_KEY, String(newVersion));
+    currentCodeVersion = newVersion;
+
+    if (tokenSessionDetected) {
+      forceLogoutFromToken(reason);
+      return;
+    }
+
+    if (hadLocalVersion) {
+      blockAccess(reason);
+      showSessionExpired();
+      return;
+    }
+
+    unblockAccess();
+    qs("expiredOverlay")?.classList.add("hidden");
+    qs("sessionExpired")?.classList.add("hidden");
+    qs("controlPanel")?.classList.add("hidden");
+    showAuthForm();
+    updateDoorVisibility();
   }
 
   function monitorFirebaseConnection() {
@@ -325,7 +328,7 @@ const firebaseConfig = {
         document.body.classList.add("firebase-offline");
         showNotification(
           "Connessione a Firebase persa. Le modifiche potrebbero non essere sincronizzate.",
-          "warning"
+          "warning",
         );
       }
     });
@@ -386,7 +389,9 @@ const firebaseConfig = {
         if (calc !== hs) {
           // hash mismatch => considera scaduta
           clearTokenUsageStart(t);
-          try { forceLogoutFromToken("Sessione token non valida"); } catch {}
+          try {
+            forceLogoutFromToken("Sessione token non valida");
+          } catch {}
           // Nascondi pannello e mostra overlay
           qs("controlPanel")?.classList.add("hidden");
           qs("expiredOverlay")?.classList.remove("hidden");
@@ -396,7 +401,9 @@ const firebaseConfig = {
         const mins = (Date.now() - parseInt(ts, 10)) / (1000 * 60);
         if (mins >= TOKEN_LIMIT_MINUTES) {
           clearTokenUsageStart(t);
-          try { forceLogoutFromToken("Sessione token scaduta"); } catch {}
+          try {
+            forceLogoutFromToken("Sessione token scaduta");
+          } catch {}
           qs("controlPanel")?.classList.add("hidden");
           qs("expiredOverlay")?.classList.remove("hidden");
           qs("sessionExpired")?.classList.remove("hidden");
@@ -573,12 +580,12 @@ const firebaseConfig = {
 
     if (mainDoorCounter) {
       mainDoorCounter.textContent = `${getClicksLeft(
-        DEVICES[0].storage_key
+        DEVICES[0].storage_key,
       )} click left`;
     }
     if (aptDoorCounter) {
       aptDoorCounter.textContent = `${getClicksLeft(
-        DEVICES[1].storage_key
+        DEVICES[1].storage_key,
       )} click left`;
     }
 
@@ -588,7 +595,7 @@ const firebaseConfig = {
         const seconds = Math.floor((TIME_LIMIT_MINUTES % 1) * 60);
         timeRemaining.textContent = `${String(minutes).padStart(
           2,
-          "0"
+          "0",
         )}:${String(seconds).padStart(2, "0")}`;
         timeRemaining.style.color = "var(--primary)";
       }
@@ -602,13 +609,13 @@ const firebaseConfig = {
     const minutesPassed = (now - parseInt(startTime, 10)) / (1000 * 60);
     const minutesLeft = Math.max(
       0,
-      Math.floor(TIME_LIMIT_MINUTES - minutesPassed)
+      Math.floor(TIME_LIMIT_MINUTES - minutesPassed),
     );
     const secondsLeft = Math.max(0, Math.floor(60 - (minutesPassed % 1) * 60));
 
     timeRemaining.textContent = `${String(minutesLeft).padStart(
       2,
-      "0"
+      "0",
     )}:${String(secondsLeft).padStart(2, "0")}`;
     if (minutesLeft < 1) timeRemaining.style.color = "var(--error)";
     else if (minutesLeft < 5) timeRemaining.style.color = "var(--warning)";
@@ -687,9 +694,6 @@ const firebaseConfig = {
   }
 
   function handleCodeChange(newVersion) {
-    const hadLocalVersion = localStorage.getItem(CODE_VERSION_KEY) !== null;
-    currentCodeVersion = newVersion;
-    localStorage.setItem(CODE_VERSION_KEY, String(newVersion));
     database
       .ref("settings/secret_code")
       .once("value")
@@ -698,19 +702,7 @@ const firebaseConfig = {
           CORRECT_CODE = codeSnap.val();
           localStorage.setItem("secret_code", CORRECT_CODE);
           const msg = "Codice aggiornato: il link non e' piu' valido";
-          if (hadLocalVersion) {
-            blockAccess(msg);
-            showSessionExpired();
-          } else if (hasTokenFootprint()) {
-            forceLogoutFromToken(msg);
-          } else {
-            unblockAccess();
-            qs("expiredOverlay")?.classList.add("hidden");
-            qs("sessionExpired")?.classList.add("hidden");
-            qs("controlPanel")?.classList.add("hidden");
-            showAuthForm();
-            updateDoorVisibility();
-          }
+          handleCodeVersionChange(newVersion, msg);
         }
       });
   }
@@ -727,13 +719,13 @@ const firebaseConfig = {
     qs("important") && (qs("important").style.display = "block");
 
     showNotification(
-      "Il codice di accesso è stato aggiornato. Inserisci il nuovo codice."
+      "Il codice di accesso è stato aggiornato. Inserisci il nuovo codice.",
     );
   }
 
   function checkExpiredLinks() {
     const secureLinks = JSON.parse(
-      localStorage.getItem("secure_links") || "{}"
+      localStorage.getItem("secure_links") || "{}",
     );
     let updated = false;
     Object.keys(secureLinks).forEach((linkId) => {
@@ -835,7 +827,7 @@ const firebaseConfig = {
             payload: { channel: 0 },
           }),
         },
-        12000
+        12000,
       );
 
       const result = await response.json().catch(() => ({}));
@@ -849,7 +841,7 @@ const firebaseConfig = {
           "Errore nell'attivazione del dispositivo:",
           response.status,
           response.statusText,
-          result
+          result,
         );
       }
     } catch (error) {
@@ -1116,8 +1108,8 @@ const firebaseConfig = {
         const why = revoked
           ? "Link revocato"
           : expired
-          ? "Link scaduto"
-          : "Utilizzi esauriti";
+            ? "Link scaduto"
+            : "Utilizzi esauriti";
         forceLogoutFromToken(why);
       }
     });
@@ -1177,8 +1169,6 @@ const firebaseConfig = {
     setTimeout(() => n.parentElement && n.remove(), 5000);
   }
 
-  
-
   function showTokenError(reason) {
     const n = document.createElement("div");
     n.style.cssText = `
@@ -1219,7 +1209,10 @@ const firebaseConfig = {
   // =============================================
   function isLoginLocked() {
     try {
-      const until = parseInt(localStorage.getItem("login_lock_until") || "0", 10);
+      const until = parseInt(
+        localStorage.getItem("login_lock_until") || "0",
+        10,
+      );
       if (!Number.isFinite(until) || until <= 0) return false;
       if (Date.now() < until) return true;
       // lock scaduto -> pulizia
@@ -1236,7 +1229,8 @@ const firebaseConfig = {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const r = s % 60;
-    if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m ${String(r).padStart(2, "0")}s`;
+    if (h > 0)
+      return `${h}h ${String(m).padStart(2, "0")}m ${String(r).padStart(2, "0")}s`;
     return `${String(m).padStart(2, "0")}m ${String(r).padStart(2, "0")}s`;
   }
 
@@ -1256,18 +1250,19 @@ const firebaseConfig = {
       if (!notice && input?.parentElement) {
         notice = document.createElement("div");
         notice.id = "lockNotice";
-        notice.style.cssText =
-          "margin-top:10px;color:#ff5a5f;font-weight:600;";
+        notice.style.cssText = "margin-top:10px;color:#ff5a5f;font-weight:600;";
         input.parentElement.insertAdjacentElement("afterend", notice);
       }
       if (notice) {
         const until = parseInt(
           localStorage.getItem("login_lock_until") || "0",
-          10
+          10,
         );
-        const remainingSec = Math.max(0, Math.floor((until - Date.now()) / 1000));
-        notice.innerHTML =
-          `<i class="fas fa-lock"></i> Too many incorrect attempts. Try again in ${secondsToHhMmSs(remainingSec)}.`;
+        const remainingSec = Math.max(
+          0,
+          Math.floor((until - Date.now()) / 1000),
+        );
+        notice.innerHTML = `<i class="fas fa-lock"></i> Too many incorrect attempts. Try again in ${secondsToHhMmSs(remainingSec)}.`;
       }
     } else {
       if (input) input.disabled = false;
@@ -1281,7 +1276,8 @@ const firebaseConfig = {
 
   function incrementFailedAttempt() {
     try {
-      const attempts = parseInt(localStorage.getItem("login_attempts") || "0", 10) + 1;
+      const attempts =
+        parseInt(localStorage.getItem("login_attempts") || "0", 10) + 1;
       localStorage.setItem("login_attempts", String(attempts));
       const left = Math.max(0, MAX_LOGIN_ATTEMPTS - attempts);
       if (attempts >= MAX_LOGIN_ATTEMPTS) {
@@ -1289,7 +1285,7 @@ const firebaseConfig = {
         localStorage.setItem("login_lock_until", String(until));
         showNotification(
           `Too many failed attempts. Page locked for ${LOCKOUT_MINUTES} minutes`,
-          "error"
+          "error",
         );
         updateLockUI();
       } else {
@@ -1522,7 +1518,7 @@ const firebaseConfig = {
         "The access link has expired. To access again, request a new link.";
 
     const assistanceBtn = document.querySelector(
-      "#sessionExpired .btn-whatsapp"
+      "#sessionExpired .btn-whatsapp",
     );
     if (assistanceBtn) {
       assistanceBtn.href =

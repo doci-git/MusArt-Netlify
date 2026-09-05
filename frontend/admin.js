@@ -1,4 +1,3 @@
-
 (() => {
   ("use strict");
 
@@ -6,17 +5,17 @@
   // CONFIGURAZIONE E INIZIALIZZAZIONE
   // =============================================
   // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCuy3Sak96soCla7b5Yb5wmkdVfMqAXmok",
-  authDomain: "check-in-4e0e9.firebaseapp.com",
-  databaseURL:
-    "https://check-in-4e0e9-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "check-in-4e0e9",
-  storageBucket: "check-in-4e0e9.firebasestorage.app",
-  messagingSenderId: "723880990177",
-  appId: "1:723880990177:web:f002733b2cc2e50d172ea0",
-  measurementId: "G-H97GB9L4F5",
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuy3Sak96soCla7b5Yb5wmkdVfMqAXmok",
+    authDomain: "check-in-4e0e9.firebaseapp.com",
+    databaseURL:
+      "https://check-in-4e0e9-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "check-in-4e0e9",
+    storageBucket: "check-in-4e0e9.firebasestorage.app",
+    messagingSenderId: "723880990177",
+    appId: "1:723880990177:web:f002733b2cc2e50d172ea0",
+    measurementId: "G-H97GB9L4F5",
+  };
   // Valori di fallback (possono essere sovrascritti da settings Firebase)
   let ADMIN_PASSWORD = "";
   const SHELLY_FUNCTION_URL = "/api/shelly-control";
@@ -142,7 +141,7 @@ const firebaseConfig = {
     if (!user) return false;
     if (allowedAdminEmails.size === 0) {
       console.warn(
-        "Nessuna allowlist admin configurata: consento l'accesso a qualsiasi utente autenticato"
+        "Nessuna allowlist admin configurata: consento l'accesso a qualsiasi utente autenticato",
       );
       return true;
     }
@@ -318,22 +317,27 @@ const firebaseConfig = {
     const newCode = (newCodeEl?.value || "").trim();
     if (!newCode) return alertOnce("Inserisci un codice valido");
 
-    const ok = await saveSettingToFirebase("secret_code", newCode);
-    if (!ok) return alertOnce("Errore nel salvataggio del nuovo codice.");
-
-    localStorage.setItem("secret_code", newCode);
-
     const currentVersion = parseInt(
       localStorage.getItem("code_version") || "1",
-      10
+      10,
     );
     const newVersion = currentVersion + 1;
-    localStorage.setItem("code_version", String(newVersion));
-    await saveSettingToFirebase("code_version", newVersion);
-
     const timestamp = Date.now().toString();
+
+    try {
+      await database.ref("settings").update({
+        secret_code: newCode,
+        code_version: newVersion,
+        last_code_update: timestamp,
+      });
+    } catch (error) {
+      console.error("Errore nel salvataggio atomico del nuovo codice:", error);
+      return alertOnce("Errore nel salvataggio del nuovo codice.");
+    }
+
+    localStorage.setItem("secret_code", newCode);
+    localStorage.setItem("code_version", String(newVersion));
     localStorage.setItem("last_code_update", timestamp);
-    await saveSettingToFirebase("last_code_update", timestamp);
 
     const currentCode = qs("currentCode");
     if (currentCode) currentCode.value = newCode;
@@ -451,13 +455,13 @@ const firebaseConfig = {
 
     const ok = await saveSettingToFirebase(
       "checkin_time_enabled",
-      String(newStatus)
+      String(newStatus),
     );
     if (ok) {
       alertOnce(
         `Controllo orario ${
           newStatus ? "attivato" : "disattivato"
-        } con successo!`
+        } con successo!`,
       );
     } else {
       alertOnce("Errore nel salvataggio delle impostazioni. Riprovare.");
@@ -560,7 +564,7 @@ const firebaseConfig = {
       maxUsage,
       expirationHours,
       customCode,
-      tokenHash
+      tokenHash,
     );
   }
 
@@ -570,7 +574,7 @@ const firebaseConfig = {
     maxUsage,
     expirationHours,
     customCode = null,
-    tokenHash = null
+    tokenHash = null,
   ) {
     const linkData = {
       id: linkId,
@@ -596,7 +600,7 @@ const firebaseConfig = {
       .catch((error) => {
         console.error("Errore salvataggio link su Firebase:", error);
         const secureLinks = JSON.parse(
-          localStorage.getItem("secure_links") || "{}"
+          localStorage.getItem("secure_links") || "{}",
         );
         secureLinks[linkId] = linkData;
         localStorage.setItem("secure_links", JSON.stringify(secureLinks));
@@ -645,10 +649,10 @@ const firebaseConfig = {
       .catch((error) => {
         console.error("Errore nel recupero dei link:", error);
         const secureLinks = JSON.parse(
-          localStorage.getItem("secure_links") || "{}"
+          localStorage.getItem("secure_links") || "{}",
         );
         const active = Object.values(secureLinks).filter(
-          (l) => l.status === "active" && l.expiration > Date.now()
+          (l) => l.status === "active" && l.expiration > Date.now(),
         );
         renderActiveLinks(container, active);
       });
@@ -677,20 +681,20 @@ const firebaseConfig = {
 
     const expiresInH = Math.max(
       0,
-      Math.floor((link.expiration - Date.now()) / (1000 * 60 * 60))
+      Math.floor((link.expiration - Date.now()) / (1000 * 60 * 60)),
     );
     const usageText = `${link.usedCount}/${link.maxUsage} utilizzi`;
     const linkUrl = `${getGuestIndexUrl()}?token=${link.id}`;
 
     let html = `
       <div style="font-size:11px;color:#666">Creato: ${fmtDateTime(
-        link.created
+        link.created,
       )}</div>
       <div style="font-weight:bold;margin:3px 0;color:var(--dark)">Scade in: ${expiresInH}h • ${usageText}</div>
       <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;">
         <a href="${linkUrl}" target="_blank" style="color:var(--primary)">${
-      link.id
-    }</a>
+          link.id
+        }</a>
       </div>
       <div style="display:flex;gap:5px;">
         <button onclick="copySecureLink('${
@@ -715,7 +719,7 @@ const firebaseConfig = {
       html += `<div style="font-size:10px;color:#888;margin-top:4px">
         <i class="fas fa-fingerprint"></i> Hash: ${String(link.hash).slice(
           0,
-          16
+          16,
         )}…
       </div>`;
     }
@@ -747,7 +751,7 @@ const firebaseConfig = {
       .catch((error) => {
         console.error("Errore revoca su Firebase:", error);
         const secureLinks = JSON.parse(
-          localStorage.getItem("secure_links") || "{}"
+          localStorage.getItem("secure_links") || "{}",
         );
         if (secureLinks[id]) {
           secureLinks[id].status = "revoked";
@@ -772,7 +776,7 @@ const firebaseConfig = {
       .catch((error) => {
         console.error("Errore statistiche:", error);
         const secureLinks = JSON.parse(
-          localStorage.getItem("secure_links") || "{}"
+          localStorage.getItem("secure_links") || "{}",
         );
         updateStatisticsUI(Object.values(secureLinks));
       });
@@ -782,11 +786,11 @@ const firebaseConfig = {
     const now = Date.now();
     const total = links.length;
     const active = links.filter(
-      (l) => l.status === "active" && l.expiration > now
+      (l) => l.status === "active" && l.expiration > now,
     ).length;
     const used = links.filter((l) => l.status === "used").length;
     const expired = links.filter(
-      (l) => l.status === "expired" || l.status === "revoked"
+      (l) => l.status === "expired" || l.status === "revoked",
     ).length;
 
     const totalEl = qs("totalLinks");
@@ -856,7 +860,7 @@ const firebaseConfig = {
             payload: { channel: 0 },
           }),
         },
-        12000
+        12000,
       );
 
       const text = await resp.text();
@@ -878,7 +882,7 @@ const firebaseConfig = {
         device,
         resultDiv,
         "Porta aperta con successo",
-        text || ""
+        text || "",
       );
     } catch (error) {
       handleDoorError(device, resultDiv, error);
@@ -995,7 +999,7 @@ const firebaseConfig = {
     const ok = results.filter((r) => r.status === "success").length;
     const ko = results.filter((r) => r.status === "error").length;
     alertOnce(
-      `${title}\n\nSuccessi: ${ok}\nErrori: ${ko}\n\nControlla i log per i dettagli.`
+      `${title}\n\nSuccessi: ${ok}\nErrori: ${ko}\n\nControlla i log per i dettagli.`,
     );
   }
 
@@ -1249,7 +1253,3 @@ const firebaseConfig = {
     showResetError,
   });
 })();
-
-
-
-
