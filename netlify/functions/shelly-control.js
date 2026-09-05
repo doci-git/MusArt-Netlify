@@ -24,7 +24,7 @@ const DEFAULT_DEVICES = [
     envKey: "DEVICE3_KEY",
     channel: 0,
     fallback:
-      process.env.DEVICE2_KEY ||
+      process.env.DEVICE3_KEY ||
       "MWI2MDc4dWlk4908A71DA809FCEC05C5D1F360943FBFC6A7934EC0FD9E3CFEAF03F8F5A6A4A0C60665B97A1AA2E2",
   },
   {
@@ -139,14 +139,20 @@ exports.handler = async (event) => {
       // leave data as raw text when Shelly returns non-JSON payloads
     }
 
-    if (!response.ok) {
+    const shellyRejected =
+      data &&
+      typeof data === "object" &&
+      (data.isok === false || data.success === false);
+
+    if (!response.ok || shellyRejected) {
       return {
-        statusCode: response.status,
+        statusCode: response.ok ? 502 : response.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({
           success: false,
           status: response.status,
-          message: "Shelly API returned an error",
+          message:
+            data?.message || data?.error || "Shelly API rejected the command",
           data,
         }),
       };

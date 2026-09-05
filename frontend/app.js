@@ -15,7 +15,12 @@
     appId: "1:723880990177:web:f002733b2cc2e50d172ea0",
     measurementId: "G-H97GB9L4F5",
   };
-  const DOOR_API_URL = "/api/shelly-control";
+  const isLiveServer =
+    ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+    window.location.port === "5500";
+  const DOOR_API_URL = isLiveServer
+    ? "https://musart-check-in.netlify.app/api/shelly-control"
+    : "/api/shelly-control";
   const SECRET_KEY = "musart_secret_123_fixed_key";
   const CODE_VERSION_KEY = "code_version";
   const KEEP_TOKEN_IN_URL = true; // mantieni il token nell'URL dopo la verifica
@@ -837,6 +842,10 @@
       } else {
         setClicksLeft(device.storage_key, clicksLeft + 1);
         updateButtonState(device);
+        showNotification(
+          result?.message || "Impossibile aprire la porta. Riprova.",
+          "error",
+        );
         console.error(
           "Errore nell'attivazione del dispositivo:",
           response.status,
